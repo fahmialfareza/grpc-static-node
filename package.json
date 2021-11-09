@@ -1,0 +1,15 @@
+{
+  "name": "grpc-node-course",
+  "version": "1.0.0",
+  "description": "course",
+  "main": "index.js",
+  "author": "Fahmi Alfareza",
+  "license": "MIT",
+  "dependencies": {
+    "google-protobuf": "^3.19.1",
+    "grpc": "^1.24.11"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.14"
+  }
+}
