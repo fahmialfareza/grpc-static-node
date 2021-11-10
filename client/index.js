@@ -4,6 +4,9 @@ const service = require('../server/protos/greet_grpc_pb');
 const calc = require('../server/protos/calculator_pb');
 const caclService = require('../server/protos/calculator_grpc_pb');
 
+const blogs = require('../server/protos/blog_pb');
+const blogService = require('../server/protos/blog_grpc_pb');
+
 const fs = require('fs');
 
 const grpc = require('grpc');
@@ -15,6 +18,128 @@ let credentials = grpc.credentials.createSsl(
 );
 
 let unsafeCreds = grpc.credentials.createInsecure();
+
+function callListBlogs() {
+  const client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    credentials
+  );
+
+  const emptyBlogRequest = new blogs.ListBlogRequest();
+  const call = client.listBlog(emptyBlogRequest, () => {});
+
+  call.on('data', (response) => {
+    console.log('Client Streaming Response', response.getBlog().toString());
+  });
+
+  call.on('error', (error) => {
+    console.log(error);
+  });
+
+  call.on('end', () => {
+    console.log('End!');
+  });
+}
+
+function callCreateBlog() {
+  const client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    credentials
+  );
+
+  const blog = new blogs.Blog();
+  blog.setAuthor('Johna');
+  blog.setTitle('First blog post');
+  blog.setContent('This is great...');
+
+  const blogRequest = new blogs.CreateBlogRequest();
+  blogRequest.setBlog(blog);
+
+  client.createBlog(blogRequest, (error, response) => {
+    if (!error) {
+      console.log('Received create blog response, ', response.toString());
+    } else {
+      console.error(error);
+    }
+  });
+}
+
+function callReadBlog() {
+  const client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    credentials
+  );
+
+  const readBlogRequest = new blogs.ReadBlogRequest();
+  readBlogRequest.setBlogId('1');
+
+  client.readBlog(readBlogRequest, (error, response) => {
+    if (!error) {
+      console.log('Found a blog ', response.array[0]);
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('Not found');
+      } else {
+        // do something else
+      }
+    }
+  });
+}
+
+function callUpdateBlog() {
+  const client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    credentials
+  );
+
+  const updateBlogRequest = new blogs.UpdateBlogRequest();
+
+  const newBlog = new blogs.Blog();
+
+  newBlog.setId('20');
+  newBlog.setAuthor('Gary');
+  newBlog.setTitle('Hello World');
+  newBlog.setContent('This is great, again!');
+
+  updateBlogRequest.setBlog(newBlog);
+
+  console.log('Blog....', newBlog.toString());
+
+  client.updateBlog(updateBlogRequest, (error, response) => {
+    if (!error) {
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('Not Found');
+      } else {
+        // do more
+      }
+    }
+  });
+}
+
+function callDeleteBlog() {
+  const client = new blogService.BlogServiceClient(
+    'localhost:50051',
+    credentials
+  );
+
+  const deleteBlogRequest = new blogs.DeleteBlogRequest();
+  const blogId = '2';
+
+  deleteBlogRequest.setBlogId(blogId);
+
+  client.deleteBlog(deleteBlogRequest, (error, response) => {
+    if (!error) {
+      console.log('Deleted blog with id: ', response.toString());
+    } else {
+      if (error.code === grpc.status.NOT_FOUND) {
+        console.log('Not Found');
+      } else {
+        console.log('Sorry something went wrong');
+      }
+    }
+  });
+}
 
 function callGreetings() {
   console.log('Hello from client');
@@ -356,6 +481,11 @@ function doErrorCall() {
 }
 
 function main() {
+  // callListBlogs();
+  // callCreateBlog();
+  // callReadBlog();
+  // callUpdateBlog();
+  callDeleteBlog();
   // doErrorCall();
   // callBiDiFindMaximum();
   // callBiDirect();
@@ -363,7 +493,7 @@ function main() {
   // callLongGreeting();
   // callPrimeNumberDecomposition();
   // callGreetManyTimes();
-  callGreetings();
+  // callGreetings();
   // callSum();
 }
 
