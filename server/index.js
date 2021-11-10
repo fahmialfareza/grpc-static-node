@@ -4,6 +4,8 @@ const service = require('../server/protos/greet_grpc_pb');
 const calc = require('../server/protos/calculator_pb');
 const caclService = require('../server/protos/calculator_grpc_pb');
 
+const fs = require('fs');
+
 const grpc = require('grpc');
 
 /* 
@@ -206,21 +208,54 @@ function greet(call, callback) {
   callback(null, greeting);
 }
 
+function squareRoot(call, callback) {
+  const number = call.request.getNumber();
+
+  if (number >= 0) {
+    let numberRoot = Math.sqrt(number);
+    let response = new calc.SquareRootResponse();
+    response.setNumberRoot(numberRoot);
+
+    callback(null, response);
+  } else {
+    // Error handling
+    return callback({
+      code: grpc.status.INVALID_ARGUMENT,
+      message:
+        'The number being sent is not positive ' + ' Number sent: ' + number,
+    });
+  }
+}
+
 function main() {
+  let credentials = grpc.ServerCredentials.createSsl(
+    fs.readFileSync('../certs/ca.crt'),
+    [
+      {
+        cert_chain: fs.readFileSync('../certs/server.crt'),
+        private_key: fs.readFileSync('../certs/server.key'),
+      },
+    ],
+    true
+  );
+
+  let unsafeCreds = grpc.ServerCredentials.createInsecure();
+
   const server = new grpc.Server();
   server.addService(caclService.CalculatorServiceService, {
     sum,
     primeNumberDecomposition,
     computeAverage,
     findMaximum,
+    squareRoot,
   });
-  // server.addService(service.GreetServiceService, {
-  //   greet,
-  //   greetManyTimes,
-  //   longGreet,
-  //   greetEveryone,
-  // });
-  server.bind('127.0.0.1:50051', grpc.ServerCredentials.createInsecure());
+  server.addService(service.GreetServiceService, {
+    greet,
+    greetManyTimes,
+    longGreet,
+    greetEveryone,
+  });
+  server.bind('127.0.0.1:50051', credentials);
   server.start();
 
   console.log('Server running on port 127.0.0.1:50051');

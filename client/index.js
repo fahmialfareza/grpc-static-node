@@ -4,14 +4,21 @@ const service = require('../server/protos/greet_grpc_pb');
 const calc = require('../server/protos/calculator_pb');
 const caclService = require('../server/protos/calculator_grpc_pb');
 
+const fs = require('fs');
+
 const grpc = require('grpc');
+
+let credentials = grpc.credentials.createSsl(
+  fs.readFileSync('../certs/ca.crt'),
+  fs.readFileSync('../certs/client.key'),
+  fs.readFileSync('../certs/client.crt')
+);
+
+let unsafeCreds = grpc.credentials.createInsecure();
 
 function callGreetings() {
   console.log('Hello from client');
-  const client = new service.GreetServiceClient(
-    'localhost:50051',
-    grpc.credentials.createInsecure()
-  );
+  const client = new service.GreetServiceClient('localhost:50051', credentials);
 
   // we do stuff
   const request = new greets.GreetRequest();
@@ -302,14 +309,61 @@ async function callBiDirect() {
   call.end();
 }
 
+function getRPCDeadline(rpcType) {
+  let timeAllowed = 5000;
+
+  switch (rpcType) {
+    case 1:
+      timeAllowed = 1000;
+      break;
+    case 2:
+      timeAllowed = 7000;
+      break;
+    default:
+      console.log('Invalid RPC Type: Using Default Timeout');
+      break;
+  }
+
+  return new Date(Date.now() + timeAllowed);
+}
+
+function doErrorCall() {
+  let deadline = getRPCDeadline(1);
+
+  // Created our server client
+  console.log("Hello, I'm a gRPC Client!");
+
+  const client = new caclService.CalculatorServiceClient(
+    'localhost:50051',
+    grpc.credentials.createInsecure()
+  );
+
+  const number = -1;
+  const squareRootRequest = new calc.SquareRootRequest();
+  squareRootRequest.setNumber(number);
+
+  client.squareRoot(
+    squareRootRequest,
+    { deadline: deadline },
+    (error, response) => {
+      if (!error) {
+        console.log('Square root is ', response.getNumberRoot());
+      } else {
+        console.log(error.message);
+      }
+    }
+  );
+}
+
 function main() {
-  callBiDiFindMaximum();
+  // doErrorCall();
+  // callBiDiFindMaximum();
   // callBiDirect();
   // callComputeAverage();
   // callLongGreeting();
   // callPrimeNumberDecomposition();
   // callGreetManyTimes();
-  // callGreetings();
+  callGreetings();
   // callSum();
 }
 
